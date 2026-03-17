@@ -9,8 +9,7 @@ import ChatPanel from './components/ChatPanel';
 import ProfileModal from './components/ProfileModal';
 import AdminPage from './components/AdminPage';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
-const socket = io(API_URL || '/', { withCredentials: true });
+const socket = io('/', { withCredentials: true });
 
 // Check if we're on the admin route
 const isAdminRoute = window.location.pathname === '/admin';

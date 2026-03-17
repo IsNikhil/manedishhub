@@ -4,11 +4,8 @@ import axios from 'axios'
 import App from './App'
 import './index.css'
 
-// In production, point all API calls to the Render backend URL
-if (import.meta.env.VITE_API_URL) {
-  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
-  axios.defaults.withCredentials = true;
-}
+// API calls use relative URLs — Vercel rewrites proxy them to Render
+axios.defaults.withCredentials = true;
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
