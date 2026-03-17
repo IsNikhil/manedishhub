@@ -51,11 +51,18 @@ function saveLocally(buffer, originalname) {
   return { url: `/uploads/${filename}`, publicId: null };
 }
 
-// Resolve URL for a DB row (handles both Cloudinary URLs and local filenames)
+// Resolve URL for a DB row (handles Cloudinary public_ids, full URLs, and local filenames)
 function resolveUrl(filename) {
   if (!filename) return null;
+  // Already a full URL (e.g. old Cloudinary https:// urls)
   if (filename.startsWith('http')) return filename;
-  return `/uploads/${filename}`;
+  // Cloudinary public_id (e.g. "mane-dish-hub/photos/xyz") — contains / but no leading /
+  if (!filename.startsWith('/') && filename.includes('/') && process.env.CLOUDINARY_CLOUD_NAME) {
+    return `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/${filename}`;
+  }
+  // Local file — must use absolute URL so it works cross-domain (Vercel → Render)
+  const apiBase = process.env.RENDER_EXTERNAL_URL || '';
+  return `${apiBase}/uploads/${filename.replace(/^\/uploads\//, '')}`;
 }
 
 router.get('/', (req, res) => {
