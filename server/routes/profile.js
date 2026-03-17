@@ -17,48 +17,61 @@ const upload = multer({
   }
 });
 
-// Get or create profile
+// Get profile (works for both logged-in Google users and anonymous sessions)
 router.get('/', (req, res) => {
   try {
-    const db = getDb();
-    let profile = db.prepare('SELECT * FROM user_profiles WHERE session_id = ?').get(req.session.id);
-    if (!profile) {
-      db.prepare('INSERT OR IGNORE INTO user_profiles (session_id, current_username) VALUES (?, ?)').run(req.session.id, req.session.username);
-      profile = db.prepare('SELECT * FROM user_profiles WHERE session_id = ?').get(req.session.id);
+    if (req.user) {
+      return res.json({
+        loggedIn: true,
+        username: req.user.display_name,
+        email: req.user.email,
+        verified: !!req.user.verified,
+        pendingVerification: !!req.user.pending_verification,
+      });
     }
+    // Anonymous fallback
     res.json({
+      loggedIn: false,
       username: req.session.username,
-      verified: !!profile?.verified,
-      pendingRequest: !!(profile?.pending_review && profile?.requested_name),
-      requestedName: profile?.requested_name || null
+      verified: false,
+      pendingVerification: false,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Submit name change request
-router.post('/request-name', upload.single('sluCard'), (req, res) => {
+// Update display name (Google users only — no admin approval needed)
+router.patch('/display-name', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Sign in with Google to change your name' });
+  const { displayName } = req.body;
+  if (!displayName || displayName.trim().length < 2 || displayName.trim().length > 30) {
+    return res.status(400).json({ error: 'Name must be 2-30 characters' });
+  }
   try {
-    const { requestedName } = req.body;
-    if (!requestedName || requestedName.trim().length < 2 || requestedName.trim().length > 30) {
-      return res.status(400).json({ error: 'Name must be 2-30 characters' });
-    }
-    if (!req.file) return res.status(400).json({ error: 'SLU card photo required' });
-
-    const db = getDb();
-    const existing = db.prepare('SELECT * FROM user_profiles WHERE session_id = ?').get(req.session.id);
-    if (existing) {
-      db.prepare('UPDATE user_profiles SET requested_name = ?, slu_card_filename = ?, pending_review = 1, verified = 0 WHERE session_id = ?')
-        .run(requestedName.trim(), req.file.filename, req.session.id);
-    } else {
-      db.prepare('INSERT INTO user_profiles (session_id, current_username, requested_name, slu_card_filename, pending_review) VALUES (?, ?, ?, ?, 1)')
-        .run(req.session.id, req.session.username, requestedName.trim(), req.file.filename);
-    }
-    res.json({ success: true, message: 'Request submitted! Awaiting admin verification.' });
+    getDb().prepare('UPDATE users SET display_name = ? WHERE id = ?').run(displayName.trim(), req.user.id);
+    res.json({ success: true, displayName: displayName.trim() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Submit SLU card for verified badge (Google users only)
+router.post('/verify', upload.single('sluCard'), (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Sign in with Google first' });
+  if (!req.file) return res.status(400).json({ error: 'SLU card photo required' });
+  try {
+    getDb().prepare('UPDATE users SET slu_card_filename = ?, pending_verification = 1, verified = 0 WHERE id = ?')
+      .run(req.file.filename, req.user.id);
+    res.json({ success: true, message: 'Verification request submitted! Admin will review your SLU card.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Legacy: keep old request-name endpoint redirecting to new flow
+router.post('/request-name', (req, res) => {
+  res.status(410).json({ error: 'Please sign in with Google and use the new verification flow.' });
 });
 
 module.exports = router;

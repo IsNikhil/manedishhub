@@ -45,7 +45,7 @@ router.get('/stats', requireAdmin, (req, res) => {
       totalPhotos: db.prepare('SELECT COUNT(*) as c FROM photos').get().c,
       totalMessages: db.prepare('SELECT COUNT(*) as c FROM chat_messages').get().c,
       todayVotes: db.prepare('SELECT COUNT(*) as c FROM votes WHERE date = ?').get(today).c,
-      pendingVerifications: db.prepare('SELECT COUNT(*) as c FROM user_profiles WHERE pending_review = 1').get().c,
+      pendingVerifications: db.prepare('SELECT COUNT(*) as c FROM users WHERE pending_verification = 1').get().c,
     };
     res.json(stats);
   } catch (err) {
@@ -53,37 +53,31 @@ router.get('/stats', requireAdmin, (req, res) => {
   }
 });
 
-// Pending name change requests
+// Pending SLU verification requests
 router.get('/pending', requireAdmin, (req, res) => {
   try {
     const db = getDb();
-    const pending = db.prepare('SELECT * FROM user_profiles WHERE pending_review = 1 ORDER BY created_at DESC').all();
+    const pending = db.prepare('SELECT * FROM users WHERE pending_verification = 1 ORDER BY created_at DESC').all();
     res.json(pending);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Approve name change
-router.post('/verify/:sessionId', requireAdmin, (req, res) => {
+// Approve verification (grant ✓ badge)
+router.post('/verify/:userId', requireAdmin, (req, res) => {
   try {
-    const db = getDb();
-    const profile = db.prepare('SELECT * FROM user_profiles WHERE session_id = ?').get(req.params.sessionId);
-    if (!profile) return res.status(404).json({ error: 'User not found' });
-    db.prepare('UPDATE user_profiles SET current_username = ?, requested_name = NULL, pending_review = 0, verified = 1 WHERE session_id = ?')
-      .run(profile.requested_name, req.params.sessionId);
+    getDb().prepare('UPDATE users SET verified = 1, pending_verification = 0 WHERE id = ?').run(req.params.userId);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Reject name change
-router.post('/reject/:sessionId', requireAdmin, (req, res) => {
+// Reject verification
+router.post('/reject/:userId', requireAdmin, (req, res) => {
   try {
-    const db = getDb();
-    db.prepare('UPDATE user_profiles SET requested_name = NULL, slu_card_filename = NULL, pending_review = 0 WHERE session_id = ?')
-      .run(req.params.sessionId);
+    getDb().prepare('UPDATE users SET slu_card_filename = NULL, pending_verification = 0 WHERE id = ?').run(req.params.userId);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -196,12 +190,29 @@ router.delete('/user/:sessionId', requireAdmin, (req, res) => {
 // Get all users
 router.get('/users', requireAdmin, (req, res) => {
   try {
-    const db = getDb();
-    const users = db.prepare('SELECT * FROM user_profiles ORDER BY created_at DESC').all();
+    const users = getDb().prepare('SELECT id, display_name, email, verified, pending_verification, created_at FROM users ORDER BY created_at DESC').all();
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Delete user
+router.delete('/user/:userId', requireAdmin, (req, res) => {
+  try {
+    getDb().prepare('DELETE FROM users WHERE id = ?').run(req.params.userId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Serve SLU card image (admin only) — already defined above but keeping for users table
+router.get('/slu-card-user/:filename', requireAdmin, (req, res) => {
+  const fs = require('fs');
+  const filePath = require('path').join(__dirname, '../../uploads/slu-cards', require('path').basename(req.params.filename));
+  if (fs.existsSync(filePath)) res.sendFile(filePath);
+  else res.status(404).json({ error: 'File not found' });
 });
 
 module.exports = router;

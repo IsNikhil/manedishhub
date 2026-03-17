@@ -6,6 +6,7 @@ const filter = new Filter();
 function setupSocketHandlers(io, sessionMiddleware) {
   io.on('connection', (socket) => {
     console.log(`[SOCKET] Client connected: ${socket.id}`);
+    io.emit('users:online', io.engine.clientsCount);
 
     // Send chat history on connection
     const db = getDb();
@@ -23,10 +24,11 @@ function setupSocketHandlers(io, sessionMiddleware) {
         if (!message || message.trim().length === 0) return;
         if (message.length > 500) return;
 
-        // Use server-side session — never trust client-sent username
+        // Prefer authenticated Google user, fall back to session username
+        const user = socket.request.user;
         const sess = socket.request.session;
         const isAdmin = !!(sess && sess.isAdmin);
-        const username = (sess && sess.username) || data.username || 'Anonymous';
+        const username = user?.display_name || (sess && sess.username) || data.username || 'Anonymous';
 
         let cleanMessage = message.trim();
         try {
@@ -58,6 +60,7 @@ function setupSocketHandlers(io, sessionMiddleware) {
 
     socket.on('disconnect', () => {
       console.log(`[SOCKET] Client disconnected: ${socket.id}`);
+      io.emit('users:online', io.engine.clientsCount);
     });
   });
 }

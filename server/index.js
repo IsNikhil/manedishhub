@@ -4,8 +4,10 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const session = require('express-session');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const path = require('path');
-const { initDb } = require('./db');
+const { initDb, getDb } = require('./db');
 const { scrapeMenu } = require('./scraper');
 const menuRouter = require('./routes/menu');
 const votesRouter = require('./routes/votes');
@@ -14,6 +16,7 @@ const { router: photosRouter } = require('./routes/photos');
 const profileRouter = require('./routes/profile');
 const adminRouter = require('./routes/admin');
 const newsRouter = require('./routes/news');
+const authRouter = require('./routes/auth');
 const { setupSocketHandlers } = require('./socket');
 
 const app = express();
@@ -48,15 +51,51 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
-// Share session with Socket.io so sockets can read session.isAdmin
+// Passport (must come after session)
+if (process.env.GOOGLE_CLIENT_ID) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/auth/google/callback'
+  }, (accessToken, refreshToken, profile, done) => {
+    try {
+      const db = getDb();
+      let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
+      if (!user) {
+        const info = db.prepare(
+          'INSERT INTO users (google_id, email, display_name) VALUES (?, ?, ?)'
+        ).run(profile.id, profile.emails?.[0]?.value || '', profile.displayName || 'SLU Student');
+        user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+      }
+      done(null, user);
+    } catch (err) { done(err); }
+  }));
+}
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser((id, done) => {
+  try {
+    const user = getDb().prepare('SELECT * FROM users WHERE id = ?').get(id);
+    done(null, user || null);
+  } catch (err) { done(err); }
+});
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Share session + passport with Socket.io
 io.use((socket, next) => sessionMiddleware(socket.request, socket.request.res || {}, next));
+io.use((socket, next) => passport.initialize()(socket.request, socket.request.res || {}, next));
+io.use((socket, next) => passport.session()(socket.request, socket.request.res || {}, next));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Session username middleware
+// Username middleware — prefer Google user display name, fall back to random anonymous name
 app.use((req, res, next) => {
-  if (!req.session.username) {
+  if (req.user) {
+    req.session.username = req.user.display_name;
+  } else if (!req.session.username) {
     const adjectives = ['Hungry', 'Happy', 'Roaring', 'Golden', 'Brave', 'Swift', 'Mighty', 'Proud'];
     const nouns = ['Lion', 'Fan', 'Student', 'Hawk', 'Spirit', 'Diner', 'Chef', 'Foodie'];
     const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -65,16 +104,6 @@ app.use((req, res, next) => {
     req.session.username = `${adj}${noun}#${num}`;
   }
   if (!req.session.votes) req.session.votes = {};
-
-  // Check if user has an approved name change in the DB
-  try {
-    const db = require('./db').getDb();
-    const profile = db.prepare('SELECT current_username FROM user_profiles WHERE session_id = ? AND verified = 1').get(req.session.id);
-    if (profile && profile.current_username && profile.current_username !== req.session.username) {
-      req.session.username = profile.current_username;
-    }
-  } catch (e) {}
-
   next();
 });
 
@@ -92,6 +121,7 @@ app.use('/api/photos', photosRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/news', newsRouter);
+app.use('/auth', authRouter);
 
 app.get('/api/session', (req, res) => {
   res.json({ username: req.session.username });

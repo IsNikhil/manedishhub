@@ -52,15 +52,15 @@ export default function AdminPage() {
     setIsLoggedIn(false);
   };
 
-  const verify = async (sessionId) => {
-    await api(`/verify/${sessionId}`, { method: 'POST' });
-    setPending(prev => prev.filter(p => p.session_id !== sessionId));
+  const verify = async (userId) => {
+    await api(`/verify/${userId}`, { method: 'POST' });
+    setPending(prev => prev.filter(p => p.id !== userId));
     loadData();
   };
 
-  const reject = async (sessionId) => {
-    await api(`/reject/${sessionId}`, { method: 'POST' });
-    setPending(prev => prev.filter(p => p.session_id !== sessionId));
+  const reject = async (userId) => {
+    await api(`/reject/${userId}`, { method: 'POST' });
+    setPending(prev => prev.filter(p => p.id !== userId));
   };
 
   const deleteReview = async (id) => {
@@ -80,10 +80,10 @@ export default function AdminPage() {
     setMessages(prev => prev.filter(m => m.id !== id));
   };
 
-  const deleteUser = async (sessionId) => {
-    if (!confirm('Remove this user profile?')) return;
-    await api(`/user/${sessionId}`, { method: 'DELETE' });
-    setUsers(prev => prev.filter(u => u.session_id !== sessionId));
+  const deleteUser = async (userId) => {
+    if (!confirm('Remove this user?')) return;
+    await api(`/user/${userId}`, { method: 'DELETE' });
+    setUsers(prev => prev.filter(u => u.id !== userId));
   };
 
   if (loading) {
@@ -180,9 +180,8 @@ export default function AdminPage() {
               <p>No pending verifications</p>
             </div>
           ) : pending.map(p => (
-            <div key={p.session_id} className="glass-card p-4">
+            <div key={p.id} className="glass-card p-4">
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* SLU card image */}
                 {p.slu_card_filename && (
                   <div className="flex-shrink-0">
                     <img
@@ -193,23 +192,12 @@ export default function AdminPage() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-start gap-2 mb-2">
-                    <div>
-                      <p className="text-xs text-white/40">Current username</p>
-                      <p className="text-sm font-semibold text-white">{p.current_username}</p>
-                    </div>
-                    <div className="text-white/30 text-xl self-center">→</div>
-                    <div>
-                      <p className="text-xs text-white/40">Requested name</p>
-                      <p className="text-base font-bold text-selu-gold">{p.requested_name}</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-white/30 mb-3">
-                    Submitted: {new Date(p.created_at).toLocaleString()}
-                  </p>
+                  <p className="text-base font-bold text-white mb-0.5">{p.display_name}</p>
+                  <p className="text-xs text-white/40 mb-1">{p.email}</p>
+                  <p className="text-[10px] text-white/30 mb-3">Submitted: {new Date(p.created_at).toLocaleString()}</p>
                   <div className="flex gap-2">
-                    <button onClick={() => verify(p.session_id)} className="btn-green text-xs px-4 py-2">✓ Approve</button>
-                    <button onClick={() => reject(p.session_id)} className="px-4 py-2 rounded-xl bg-red-400/15 border border-red-400/25 text-red-300 text-xs font-semibold hover:bg-red-400/25 transition-colors">✗ Reject</button>
+                    <button onClick={() => verify(p.id)} className="btn-green text-xs px-4 py-2">✓ Approve</button>
+                    <button onClick={() => reject(p.id)} className="px-4 py-2 rounded-xl bg-red-400/15 border border-red-400/25 text-red-300 text-xs font-semibold hover:bg-red-400/25 transition-colors">✗ Reject</button>
                   </div>
                 </div>
               </div>
@@ -225,15 +213,15 @@ export default function AdminPage() {
             {users.length === 0 ? (
               <p className="p-8 text-center text-white/40">No users yet</p>
             ) : users.map(u => (
-              <div key={u.session_id} className="flex items-center justify-between p-3 hover:bg-white/3 transition-colors">
+              <div key={u.id} className="flex items-center justify-between p-3 hover:bg-white/3 transition-colors">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-white truncate">{u.current_username}</span>
-                    {u.verified ? <span className="badge-verified">✓ Verified</span> : <span className="text-[10px] text-white/30">Anonymous</span>}
+                    <span className="text-sm font-semibold text-white truncate">{u.display_name}</span>
+                    {u.verified ? <span className="badge-verified">✓ Verified</span> : u.pending_verification ? <span className="badge-pending">⏳ Pending</span> : null}
                   </div>
-                  <p className="text-[10px] text-white/30">Joined {new Date(u.created_at).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-white/30">{u.email} · Joined {new Date(u.created_at).toLocaleDateString()}</p>
                 </div>
-                <button onClick={() => deleteUser(u.session_id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-400/10 hover:bg-red-400/20 transition-colors flex-shrink-0">Delete</button>
+                <button onClick={() => deleteUser(u.id)} className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded-lg bg-red-400/10 hover:bg-red-400/20 transition-colors flex-shrink-0">Delete</button>
               </div>
             ))}
           </div>

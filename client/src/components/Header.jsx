@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Header({ activeTab, setActiveTab, username, profile, isAdmin, onOpenProfile }) {
+export default function Header({ activeTab, setActiveTab, username, profile, isAdmin, onlineCount, onOpenProfile }) {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
   });
@@ -15,8 +15,16 @@ export default function Header({ activeTab, setActiveTab, username, profile, isA
           </div>
           <div className="min-w-0">
             <h1 className="text-base sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-selu-gold via-yellow-200 to-white leading-tight truncate">Mane Dish Hub</h1>
-            <p className="text-white/50 text-[10px] sm:text-xs hidden sm:block truncate">Southeastern Louisiana University • {today}</p>
-            <p className="text-white/50 text-[10px] sm:hidden font-medium tracking-wide uppercase">SLU Dining</p>
+            <div className="flex items-center gap-2">
+              <p className="text-white/50 text-[10px] sm:text-xs hidden sm:block truncate">Southeastern Louisiana University • {today}</p>
+              <p className="text-white/50 text-[10px] sm:hidden font-medium tracking-wide uppercase">SLU Dining</p>
+              {onlineCount > 0 && (
+                <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+                  {onlineCount} online
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

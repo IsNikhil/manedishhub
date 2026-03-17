@@ -23,6 +23,7 @@ export default function App() {
   const [userVotes, setUserVotes] = useState({});
   const [profile, setProfile] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   const fetchProfile = async () => {
     try {
@@ -31,8 +32,9 @@ export default function App() {
         axios.get('/api/admin/me', { withCredentials: true }),
       ]);
       if (profileRes.status === 'fulfilled') {
-        setProfile(profileRes.value.data);
-        setUsername(profileRes.value.data.username);
+        const data = profileRes.value.data;
+        setProfile(data);
+        setUsername(data.username);
       } else {
         const res = await axios.get('/api/session', { withCredentials: true });
         setUsername(res.data.username);
@@ -54,7 +56,8 @@ export default function App() {
     socket.on('vote:update', ({ itemId, votes: newVotes }) => {
       setVotes(prev => ({ ...prev, [itemId]: newVotes }));
     });
-    return () => socket.off('vote:update');
+    socket.on('users:online', (count) => setOnlineCount(count));
+    return () => { socket.off('vote:update'); socket.off('users:online'); };
   }, []);
 
   const handleVote = async (itemId, voteType) => {
@@ -80,6 +83,7 @@ export default function App() {
         username={username}
         profile={profile}
         isAdmin={isAdmin}
+        onlineCount={onlineCount}
         onOpenProfile={() => setProfileOpen(true)}
       />
 

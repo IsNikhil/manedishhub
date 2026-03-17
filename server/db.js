@@ -84,6 +84,17 @@ function initDb() {
       pending_review INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      google_id TEXT UNIQUE NOT NULL,
+      email TEXT,
+      display_name TEXT NOT NULL,
+      verified INTEGER DEFAULT 0,
+      slu_card_filename TEXT,
+      pending_verification INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // Add is_admin column to existing chat_messages tables (safe to run multiple times)

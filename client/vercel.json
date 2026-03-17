@@ -1,6 +1,7 @@
 {
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://manedishhub.onrender.com/api/:path*" },
+    { "source": "/auth/:path*", "destination": "https://manedishhub.onrender.com/auth/:path*" },
     { "source": "/socket.io/:path*", "destination": "https://manedishhub.onrender.com/socket.io/:path*" },
     { "source": "/uploads/:path*", "destination": "https://manedishhub.onrender.com/uploads/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
