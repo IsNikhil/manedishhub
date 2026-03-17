@@ -5,7 +5,6 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const session = require('express-session');
 const path = require('path');
-const cron = require('node-cron');
 const { initDb } = require('./db');
 const { scrapeMenu } = require('./scraper');
 const menuRouter = require('./routes/menu');
@@ -99,7 +98,7 @@ app.get('/api/session', (req, res) => {
 });
 
 // Socket.io
-setupSocketHandlers(io);
+setupSocketHandlers(io, sessionMiddleware);
 
 // No cron job needed — scraping is triggered automatically when users visit
 // the menu page and the cached data is older than SCRAPE_INTERVAL_MINUTES.

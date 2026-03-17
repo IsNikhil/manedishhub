@@ -3,7 +3,7 @@ const Filter = require('bad-words');
 
 const filter = new Filter();
 
-function setupSocketHandlers(io) {
+function setupSocketHandlers(io, sessionMiddleware) {
   io.on('connection', (socket) => {
     console.log(`[SOCKET] Client connected: ${socket.id}`);
 
@@ -16,6 +16,8 @@ function setupSocketHandlers(io) {
 
     // Handle new chat messages
     socket.on('chat:message', (data) => {
+      // Re-read session fresh so admin login in another tab is picked up immediately
+      sessionMiddleware(socket.request, socket.request.res || {}, () => {
       try {
         const { message } = data;
         if (!message || message.trim().length === 0) return;
@@ -51,6 +53,7 @@ function setupSocketHandlers(io) {
       } catch (err) {
         console.error('[SOCKET] Chat error:', err.message);
       }
+      }); // end sessionMiddleware re-read
     });
 
     socket.on('disconnect', () => {

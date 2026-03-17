@@ -272,7 +272,7 @@ export default function AdminPage() {
               <div className="relative">
                 <img src={p.url} alt={p.caption || 'Photo'} className="w-full h-32 object-cover" />
                 <button onClick={() => deletePhoto(p.id)}
-                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500/90 hover:bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
                   ✕
                 </button>
               </div>
