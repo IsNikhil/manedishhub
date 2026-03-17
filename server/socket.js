@@ -6,7 +6,7 @@ const filter = new Filter();
 function setupSocketHandlers(io, sessionMiddleware) {
   io.on('connection', (socket) => {
     console.log(`[SOCKET] Client connected: ${socket.id}`);
-    io.emit('users:online', io.engine.clientsCount);
+    io.emit('users:online', io.sockets.sockets.size);
 
     // Send chat history on connection
     const db = getDb();
@@ -58,9 +58,13 @@ function setupSocketHandlers(io, sessionMiddleware) {
       }); // end sessionMiddleware re-read
     });
 
+    socket.on('get:online', () => {
+      socket.emit('users:online', io.sockets.sockets.size);
+    });
+
     socket.on('disconnect', () => {
       console.log(`[SOCKET] Client disconnected: ${socket.id}`);
-      io.emit('users:online', io.engine.clientsCount);
+      io.emit('users:online', io.sockets.sockets.size);
     });
   });
 }

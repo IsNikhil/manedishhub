@@ -57,6 +57,7 @@ export default function App() {
       setVotes(prev => ({ ...prev, [itemId]: newVotes }));
     });
     socket.on('users:online', (count) => setOnlineCount(count));
+    socket.emit('get:online'); // request current count after listener is registered
     return () => { socket.off('vote:update'); socket.off('users:online'); };
   }, []);
 

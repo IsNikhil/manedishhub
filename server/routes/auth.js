@@ -12,9 +12,13 @@ router.get('/google', (req, res, next) => {
 
 // Google callback
 router.get('/google/callback',
-  passport.authenticate('google', { failureRedirect: '/?auth=failed' }),
+  passport.authenticate('google', { failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/?auth=failed` }),
   (req, res) => {
-    res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
+    const home = process.env.CLIENT_URL || 'http://localhost:5173';
+    // Use JS redirect instead of 302 so the browser processes Set-Cookie before navigating
+    res.send(`<!DOCTYPE html><html><head><title>Logging in...</title></head><body>
+      <script>window.location.replace(${JSON.stringify(home)});</script>
+    </body></html>`);
   }
 );
 
