@@ -36,11 +36,16 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+const isProd = process.env.NODE_ENV === 'production';
 const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || 'mane-dish-secret-key',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
+  cookie: {
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  }
 });
 app.use(sessionMiddleware);
 
