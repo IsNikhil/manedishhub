@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables — NEVER commit these
+server/.env
+client/.env
+client/.env.local
+
+# Build output
+client/dist/
+
+# SQLite database
+server/*.db
+server/*.db-shm
+server/*.db-wal
+
+# Uploaded files (SLU cards, local photo fallback)
+server/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

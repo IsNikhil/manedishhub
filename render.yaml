@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: mane-dish-hub-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false   # set manually in Render dashboard
+      - key: CLIENT_URL
+        sync: false   # set to your Vercel URL, e.g. https://mane-dish-hub.vercel.app
+      - key: DISABLE_SCRAPER
+        value: true   # set to false only on paid plan (needs more RAM for Playwright)
+      - key: SCRAPE_INTERVAL_MINUTES
+        value: 30
